@@ -1,4 +1,4 @@
-export type CsvOptions = {
+export type CsvStringifyOptions = {
   header?: boolean;
   columns?: string[];
 };
@@ -20,7 +20,7 @@ function escapeCell(value: unknown): string {
   return `"${stringValue.replace(/"/g, '""')}"`;
 }
 
-export function stringify(rows: Row[], options: CsvOptions = {}): string {
+export function stringify(rows: Row[], options: CsvStringifyOptions = {}): string {
   const columns = options.columns ?? (rows[0] ? Object.keys(rows[0]) : []);
   const includeHeader = options.header ?? true;
   const lines: string[] = [];

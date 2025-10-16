@@ -9,8 +9,7 @@
       "@chorerights/lib": ["packages/lib/src/index.ts"],
       "@chorerights/lib/*": ["packages/lib/src/*"],
       "@chorerights/db": ["packages/db/src/index.ts"],
-      "@chorerights/db/*": ["packages/db/src/*"],
-      "csv-stringify/sync": ["scripts/lib/csv-stringify-sync.ts"]
+      "@chorerights/db/*": ["packages/db/src/*"]
     },
     "jsx": "preserve",
     "strict": true,

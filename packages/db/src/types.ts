@@ -1,68 +1,74 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
 export interface Database {
   public: {
     Tables: {
       users: {
         Row: {
-          created_at: string | null;
-          email: string | null;
           id: string;
-          role: 'creator' | 'licensee' | 'admin' | null;
+          email: string | null;
+          role: 'creator' | 'licensee' | 'admin';
           wallet_address: string | null;
+          created_at: string;
         };
         Insert: {
-          created_at?: string | null;
-          email?: string | null;
           id: string;
-          role?: 'creator' | 'licensee' | 'admin' | null;
+          email?: string | null;
+          role?: 'creator' | 'licensee' | 'admin';
           wallet_address?: string | null;
+          created_at?: string;
         };
         Update: {
-          created_at?: string | null;
-          email?: string | null;
           id?: string;
-          role?: 'creator' | 'licensee' | 'admin' | null;
+          email?: string | null;
+          role?: 'creator' | 'licensee' | 'admin';
           wallet_address?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
       works: {
         Row: {
-          created_at: string | null;
-          description: string | null;
-          fingerprint_id: string | null;
-          icc_code: string | null;
           id: string;
-          metadata: Json | null;
           owner_id: string;
-          status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' | null;
           title: string;
+          description: string | null;
+          metadata: Json | null;
+          icc_code: string;
           video_url: string | null;
+          fingerprint_id: string | null;
+          status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+          created_at: string;
         };
         Insert: {
-          created_at?: string | null;
-          description?: string | null;
-          fingerprint_id?: string | null;
-          icc_code?: string | null;
           id?: string;
-          metadata?: Json | null;
           owner_id: string;
-          status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' | null;
           title: string;
+          description?: string | null;
+          metadata?: Json | null;
+          icc_code: string;
           video_url?: string | null;
+          fingerprint_id?: string | null;
+          status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+          created_at?: string;
         };
         Update: {
-          created_at?: string | null;
-          description?: string | null;
-          fingerprint_id?: string | null;
-          icc_code?: string | null;
           id?: string;
-          metadata?: Json | null;
           owner_id?: string;
-          status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' | null;
           title?: string;
+          description?: string | null;
+          metadata?: Json | null;
+          icc_code?: string;
           video_url?: string | null;
+          fingerprint_id?: string | null;
+          status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+          created_at?: string;
         };
         Relationships: [
           {
@@ -71,32 +77,38 @@ export interface Database {
             referencedRelation: 'users';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'works_fingerprint_id_fkey';
+            columns: ['fingerprint_id'];
+            referencedRelation: 'fingerprints';
+            referencedColumns: ['id'];
+          },
         ];
       };
       fingerprints: {
         Row: {
-          algo: string;
-          created_at: string | null;
-          created_by: string | null;
-          hash: string;
           id: string;
-          work_id: string | null;
+          algo: string;
+          hash: string;
+          work_id: string;
+          created_by: string | null;
+          created_at: string;
         };
         Insert: {
-          algo: string;
-          created_at?: string | null;
-          created_by?: string | null;
-          hash: string;
           id?: string;
-          work_id?: string | null;
+          algo: string;
+          hash: string;
+          work_id: string;
+          created_by?: string | null;
+          created_at?: string;
         };
         Update: {
-          algo?: string;
-          created_at?: string | null;
-          created_by?: string | null;
-          hash?: string;
           id?: string;
-          work_id?: string | null;
+          algo?: string;
+          hash?: string;
+          work_id?: string;
+          created_by?: string | null;
+          created_at?: string;
         };
         Relationships: [
           {
@@ -105,32 +117,41 @@ export interface Database {
             referencedRelation: 'works';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'fingerprints_created_by_fkey';
+            columns: ['created_by'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
         ];
       };
       license_requests: {
         Row: {
-          created_at: string | null;
           id: string;
-          request_data: Json;
-          requester_id: string;
-          status: 'PENDING' | 'APPROVED' | 'REJECTED';
           work_id: string;
+          requester_id: string;
+          request_data: Json;
+          status: 'PENDING' | 'APPROVED' | 'REJECTED';
+          created_at: string;
+          updated_at: string | null;
         };
         Insert: {
-          created_at?: string | null;
           id?: string;
-          request_data: Json;
-          requester_id: string;
-          status?: 'PENDING' | 'APPROVED' | 'REJECTED';
           work_id: string;
+          requester_id: string;
+          request_data: Json;
+          status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+          created_at?: string;
+          updated_at?: string | null;
         };
         Update: {
-          created_at?: string | null;
           id?: string;
-          request_data?: Json;
-          requester_id?: string;
-          status?: 'PENDING' | 'APPROVED' | 'REJECTED';
           work_id?: string;
+          requester_id?: string;
+          request_data?: Json;
+          status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+          created_at?: string;
+          updated_at?: string | null;
         };
         Relationships: [
           {
@@ -149,37 +170,37 @@ export interface Database {
       };
       agreements: {
         Row: {
-          created_at: string | null;
-          creator_id: string;
           id: string;
+          work_id: string;
+          creator_id: string;
           licensee_id: string;
+          terms: Json;
+          status: 'DRAFT' | 'SIGNED' | 'FINALIZED';
           polygon_tx_hash: string | null;
           signed_at: string | null;
-          status: 'DRAFT' | 'SIGNED' | 'FINALIZED';
-          terms: Json;
-          work_id: string;
+          created_at: string;
         };
         Insert: {
-          created_at?: string | null;
-          creator_id: string;
           id?: string;
+          work_id: string;
+          creator_id: string;
           licensee_id: string;
+          terms: Json;
+          status?: 'DRAFT' | 'SIGNED' | 'FINALIZED';
           polygon_tx_hash?: string | null;
           signed_at?: string | null;
-          status?: 'DRAFT' | 'SIGNED' | 'FINALIZED';
-          terms: Json;
-          work_id: string;
+          created_at?: string;
         };
         Update: {
-          created_at?: string | null;
-          creator_id?: string;
           id?: string;
+          work_id?: string;
+          creator_id?: string;
           licensee_id?: string;
+          terms?: Json;
+          status?: 'DRAFT' | 'SIGNED' | 'FINALIZED';
           polygon_tx_hash?: string | null;
           signed_at?: string | null;
-          status?: 'DRAFT' | 'SIGNED' | 'FINALIZED';
-          terms?: Json;
-          work_id?: string;
+          created_at?: string;
         };
         Relationships: [
           {
@@ -188,35 +209,47 @@ export interface Database {
             referencedRelation: 'works';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'agreements_creator_id_fkey';
+            columns: ['creator_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'agreements_licensee_id_fkey';
+            columns: ['licensee_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
         ];
       };
       payments: {
         Row: {
+          id: string;
           agreement_id: string;
           amount: number;
-          created_at: string | null;
           currency: string;
-          id: string;
-          source: 'stripe' | 'test' | 'manual' | null;
-          status: 'RECORDED' | 'DISTRIBUTED' | null;
+          source: 'stripe' | 'test' | 'manual';
+          status: 'RECORDED' | 'DISTRIBUTED';
+          created_at: string;
         };
         Insert: {
+          id?: string;
           agreement_id: string;
           amount: number;
-          created_at?: string | null;
           currency: string;
-          id?: string;
-          source?: 'stripe' | 'test' | 'manual' | null;
-          status?: 'RECORDED' | 'DISTRIBUTED' | null;
+          source?: 'stripe' | 'test' | 'manual';
+          status?: 'RECORDED' | 'DISTRIBUTED';
+          created_at?: string;
         };
         Update: {
+          id?: string;
           agreement_id?: string;
           amount?: number;
-          created_at?: string | null;
           currency?: string;
-          id?: string;
-          source?: 'stripe' | 'test' | 'manual' | null;
-          status?: 'RECORDED' | 'DISTRIBUTED' | null;
+          source?: 'stripe' | 'test' | 'manual';
+          status?: 'RECORDED' | 'DISTRIBUTED';
+          created_at?: string;
         };
         Relationships: [
           {
@@ -229,67 +262,80 @@ export interface Database {
       };
       events: {
         Row: {
-          created_at: string | null;
           id: string;
+          user_id: string | null;
           kind: string;
           meta: Json | null;
-          user_id: string | null;
+          created_at: string;
         };
         Insert: {
-          created_at?: string | null;
           id?: string;
+          user_id?: string | null;
           kind: string;
           meta?: Json | null;
-          user_id?: string | null;
+          created_at?: string;
         };
         Update: {
-          created_at?: string | null;
           id?: string;
+          user_id?: string | null;
           kind?: string;
           meta?: Json | null;
-          user_id?: string | null;
+          created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'events_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       kpi_daily: {
         Row: {
-          agreements: number | null;
-          ai_precision: number | null;
-          api_uptime: number | null;
           day: string;
-          license_requests: number | null;
           signup_users: number | null;
-          updated_at: string | null;
           work_count: number | null;
+          license_requests: number | null;
+          agreements: number | null;
+          api_uptime: number | null;
+          ai_precision: number | null;
+          updated_at: string;
         };
         Insert: {
-          agreements?: number | null;
-          ai_precision?: number | null;
-          api_uptime?: number | null;
           day: string;
-          license_requests?: number | null;
           signup_users?: number | null;
-          updated_at?: string | null;
           work_count?: number | null;
+          license_requests?: number | null;
+          agreements?: number | null;
+          api_uptime?: number | null;
+          ai_precision?: number | null;
+          updated_at?: string;
         };
         Update: {
-          agreements?: number | null;
-          ai_precision?: number | null;
-          api_uptime?: number | null;
           day?: string;
-          license_requests?: number | null;
           signup_users?: number | null;
-          updated_at?: string | null;
           work_count?: number | null;
+          license_requests?: number | null;
+          agreements?: number | null;
+          api_uptime?: number | null;
+          ai_precision?: number | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
     };
-    Views: {};
     Functions: {
       aggregate_kpi_daily: {
-        Args: Record<string, never>;
+        Args: Record<PropertyKey, never>;
         Returns: void;
+      };
+      approve_license_request: {
+        Args: {
+          p_request_id: string;
+          p_note?: string;
+        };
+        Returns: string;
       };
       create_work_with_icc: {
         Args: {
@@ -299,14 +345,13 @@ export interface Database {
       };
       log_event: {
         Args: {
-          kind: string;
-          meta?: Json;
+          p_kind: string;
+          p_meta?: Json;
         };
         Returns: void;
       };
     };
-    Enums: {
-      role: 'creator' | 'licensee' | 'admin';
-    };
+    Enums: {};
+    CompositeTypes: {};
   };
 }
