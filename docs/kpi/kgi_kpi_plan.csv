@@ -1,0 +1,18 @@
+Category,KGI (Key Goal Indicator),KPI (Key Performance Indicator),Target Value,Unit,Measurement Method,Frequency,Responsible,Notes
+User Growth,Achieve initial PMF by Mar 2026,Number of registered creators,50,users,Supabase user table,Weekly,PM,Target threshold for product-market fit
+User Growth,,Number of active licensee companies,10,companies,Usage logs / contracts,Monthly,BizDev,Focus on entertainment and advertising industries
+Usage,Increase content registration volume,Number of registered works,200,works,Supabase works table,Weekly,PM,Derived from ICC registration count
+Usage,,Number of license requests,30,requests,Supabase license_requests table,Weekly,PM,Validated via approval rate
+System,Ensure platform reliability,System uptime,99.5,percent,CloudWatch metrics,Daily,Engineering,AWS CloudWatch + Supabase monitor
+System,,Average API response time,<300,ms,API logs / CloudWatch,Daily,Engineering,Measured via /api/works/register
+AI Accuracy,Verify pose fingerprint precision,Pose match accuracy,90,percent,Rekognition eval logs,Weekly,AI Engineer,Calculated from test dataset
+Monetization,Demonstrate financial viability,Simulated license revenue,500000,JPN¥,Test transactions,Monthly,Finance,Calculated from agreements * fee
+Monetization,,Conversion to paid plan (simulated),10,percent,Survey / dashboard,Monthly,PM,Conversion proxy through intention surveys
+Legal Validation,Establish legal credibility,Number of legal advisor confirmations,3,cases,Meeting logs,Monthly,Legal,Includes Tokyo IP Center & lawyers
+Legal Validation,,Cultural agency feedback received,1,case,Official correspondence,Quarterly,Legal,Proof of legitimacy
+Customer Satisfaction,Build creator trust,Average CSAT score,4.0,scale 1–5,User feedback forms,Monthly,UX,Collected via Typeform
+Customer Satisfaction,,NPS (Net Promoter Score),+20,score,User interviews,Quarterly,UX,Indicator of referral potential
+Engagement,Strengthen creator activity,Repeat usage rate,30,percent,Behavioral analytics,Monthly,Data Analyst,Percentage of users with >2 registrations
+Engagement,,Average session time,5,minutes,Web analytics,Weekly,PM,From Vercel/GA data
+Business Readiness,Investor presentation readiness,Completion of PoC report,100,percent,Documentation tracking,Once,PM,Final output for seed funding
+Business Readiness,,Investor meeting count,5,meetings,Meeting records,Quarterly,Founder,Target includes VC & angels

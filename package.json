@@ -1,0 +1,47 @@
+{
+  "name": "chore-rights-mvp",
+  "private": true,
+  "packageManager": "pnpm@8.15.4",
+  "scripts": {
+    "dev": "pnpm --filter @chorerights/web dev",
+    "build": "pnpm --filter @chorerights/web build",
+    "lint": "pnpm run lint:root && pnpm -r --stream lint",
+    "lint:root": "eslint apps packages scripts --ext .ts,.tsx,.js,.cjs,.mjs --max-warnings=0",
+    "format": "prettier --write \"**/*.{cjs,js,ts,tsx,md,json,css,scss}\"",
+    "format:check": "prettier --check \"**/*.{cjs,js,ts,tsx,md,json,css,scss}\"",
+    "typecheck": "pnpm --filter @chorerights/web typecheck && pnpm --filter @chorerights/lib typecheck && pnpm --filter @chorerights/db typecheck",
+    "prepare": "husky install",
+    "export:kpi": "tsx scripts/export-kpi-to-csv.ts",
+    "verify:migrations": "tsx scripts/verify-migration-idempotent.ts",
+    "docs:init": "bash scripts/init-docs-structure.sh",
+    "docs:check-links": "bash scripts/check-links.sh",
+    "docs:lint": "bash scripts/lint-md.sh",
+    "openapi:generate": "bash scripts/generate-openapi.sh",
+    "security:check-access": "bash scripts/check-access.sh",
+    "test:e2e": "echo \"E2E tests not yet implemented\"",
+    "e2e": "bash scripts/run-e2e.sh",
+    "test": "pnpm --filter @chorerights/web test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.1",
+    "csv-stringify": "^6.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.1.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}

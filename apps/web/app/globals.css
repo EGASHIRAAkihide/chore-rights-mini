@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background-color: theme('colors.slate.50');
+}
+
+[data-testid='primary-cta'] {
+  scroll-margin-top: 8rem;
+}
