@@ -1,4 +1,4 @@
-import { z } from '../../lib/src/z';
+import { z } from '@chorerights/lib/z';
 
 export const userRoleSchema = z.enum(['creator', 'licensee', 'admin']);
 
@@ -101,9 +101,11 @@ export type PaymentRow = z.infer<typeof paymentRowSchema>;
 export type EventRow = z.infer<typeof eventRowSchema>;
 export type KpiDailyRow = z.infer<typeof kpiDailyRowSchema>;
 
-export const eventInsertSchema = eventRowSchema.pick({
-  kind: true,
-  meta: true,
-}).extend({
-  user_id: z.string().uuid().nullable().optional(),
-});
+export const eventInsertSchema = eventRowSchema
+  .pick({
+    kind: true,
+    meta: true,
+  })
+  .extend({
+    user_id: z.string().uuid().nullable().optional(),
+  });
