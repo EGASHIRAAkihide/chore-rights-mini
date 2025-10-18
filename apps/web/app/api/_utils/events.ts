@@ -1,5 +1,3 @@
-import type { Database } from '@chorerights/db';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type AuditEventPayload = {
@@ -10,10 +8,10 @@ type AuditEventPayload = {
   meta?: Record<string, unknown>;
 };
 
-type PublicClient = SupabaseClient<Database>;
+type PublicClient = SupabaseClient;
 
 export async function logAuditEvent(client: PublicClient, payload: AuditEventPayload) {
-  const eventPayload: Database['public']['Tables']['events']['Insert'] = {
+  const eventPayload = {
     user_id: payload.userId,
     kind: payload.action,
     meta: {

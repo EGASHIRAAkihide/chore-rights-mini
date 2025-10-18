@@ -1,56 +1,44 @@
-import type { Database } from '@chorerights/db';
+import type { NextRequest } from 'next/server';
 
-import type { SupabaseClient, User } from '@supabase/supabase-js';
-
-type PublicClient = SupabaseClient<Database>;
-
-const adminEmailEnv = process.env.ADMIN_EMAILS ?? '';
-const adminEmailSet = new Set(
-  adminEmailEnv
-    .split(',')
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => value.length > 0),
-);
-
-function hasAdminRoleClaim(user: User | null): boolean {
-  if (!user) {
-    return false;
-  }
-
-  const roleClaim =
-    (user.app_metadata?.role as string | undefined) ??
-    (user.user_metadata?.role as string | undefined);
-
-  return typeof roleClaim === 'string' && roleClaim.toLowerCase() === 'admin';
-}
+import { createProblemResponse } from './problem';
+import { applySupabaseCookies, createSupabaseServerClient } from './supabase';
 
 function isAdminEmail(email?: string | null): boolean {
   if (!email) {
     return false;
   }
 
-  return adminEmailSet.has(email.toLowerCase());
+  const env = process.env.ADMIN_EMAILS;
+  if (!env) {
+    return false;
+  }
+
+  return env
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0)
+    .includes(email.toLowerCase());
 }
 
-export async function isAdminUser(client: PublicClient, user: User | null): Promise<boolean> {
-  if (!user) {
-    return false;
+export async function requireAdmin(request: NextRequest) {
+  const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData?.user) {
+    const problem = createProblemResponse(401, 'Unauthorized', {
+      detail: 'Authentication required.',
+    });
+    applySupabaseCookies(problem, supabaseResponse);
+    return problem;
   }
 
-  if (isAdminEmail(user.email) || hasAdminRoleClaim(user)) {
-    return true;
+  if (!isAdminEmail(authData.user.email)) {
+    const problem = createProblemResponse(403, 'Forbidden', {
+      detail: 'Administrator access required.',
+    });
+    applySupabaseCookies(problem, supabaseResponse);
+    return problem;
   }
 
-  const { data, error } = await client
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Failed to verify admin role', error);
-    return false;
-  }
-
-  return data?.role === 'admin';
+  return null;
 }

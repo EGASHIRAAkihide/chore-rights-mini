@@ -1,7 +1,5 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-
-import type { Database } from '@chorerights/db';
 
 import { z } from 'zod';
 
@@ -10,8 +8,6 @@ import { createProblemResponse } from '../../_utils/problem';
 import { applySupabaseCookies, createSupabaseServerClient } from '../../_utils/supabase';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-
 
 const approveSchema = z.object({
   requestId: z.string().uuid(),
@@ -54,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   const licenseRequest = await getLicenseRequest(supabase, payload.requestId);
-  if (licenseRequest.error) {
+  if ('error' in licenseRequest) {
     const detail =
       licenseRequest.errorCode === 404
         ? 'License request not found.'
@@ -81,7 +77,7 @@ export async function POST(request: NextRequest) {
   }
 
   const workOwner = await getWorkOwner(supabase, requestRow.work_id);
-  if (workOwner.error) {
+  if ('error' in workOwner) {
     const detail =
       workOwner.errorCode === 403
         ? 'You are not authorized to approve this request.'
@@ -159,7 +155,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function getLicenseRequest(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient,
   requestId: string,
 ): Promise<{ data?: LicenseRequestRow; error?: Error; errorCode?: number }> {
   const { data, error } = await supabase
@@ -184,7 +180,7 @@ async function getLicenseRequest(
 }
 
 async function getWorkOwner(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient,
   workId: string,
 ): Promise<{ ownerId: string } | { error: Error; errorCode?: number }> {
   const { data, error } = await supabase
@@ -209,7 +205,7 @@ async function getWorkOwner(
 }
 
 async function logApproveEvent(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient,
   userId: string,
   requestId: string,
   agreementId: string,
@@ -223,4 +219,10 @@ async function logApproveEvent(
   });
 }
 
-type LicenseRequestRow = Database['public']['Tables']['license_requests']['Row'];
+type LicenseRequestRow = {
+  id: string;
+  status: string;
+  work_id: string;
+  request_data: Record<string, unknown> | null;
+  requester_id: string;
+};

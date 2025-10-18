@@ -18,7 +18,7 @@
     "docs:lint": "bash scripts/lint-md.sh",
     "openapi:generate": "bash scripts/generate-openapi.sh",
     "security:check-access": "bash scripts/check-access.sh",
-    "test:e2e": "echo \"E2E tests not yet implemented\"",
+    "test:e2e": "pnpm exec playwright test",
     "e2e": "bash scripts/run-e2e.sh",
     "test": "pnpm --filter @chorerights/web test"
   },
@@ -27,6 +27,7 @@
     "csv-stringify": "^6.4.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.45.0",
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",

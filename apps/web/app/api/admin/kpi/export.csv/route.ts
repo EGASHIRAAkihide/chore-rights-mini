@@ -1,9 +1,9 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-import { isAdminUser } from '../../../_utils/admin';
+import { requireAdmin } from '../../../_utils/admin';
 import { stringifyCsv } from '../../../_utils/csv';
 import { createProblemResponse } from '../../../_utils/problem';
 import { applySupabaseCookies, createSupabaseServerClient } from '../../../_utils/supabase';
@@ -51,25 +51,12 @@ function defaultDateRange(): { from: string; to: string } {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAdmin(request);
+  if (guard) {
+    return guard;
+  }
+
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
-
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData?.user) {
-    const problem = createProblemResponse(401, 'Unauthorized', {
-      detail: 'Authentication required.',
-    });
-    applySupabaseCookies(problem, supabaseResponse);
-    return problem;
-  }
-
-  const isAdmin = await isAdminUser(supabase, authData.user);
-  if (!isAdmin) {
-    const problem = createProblemResponse(403, 'Forbidden', {
-      detail: 'Administrator access required.',
-    });
-    applySupabaseCookies(problem, supabaseResponse);
-    return problem;
-  }
 
   const url = new URL(request.url);
   const rawParams = Object.fromEntries(url.searchParams.entries());
@@ -113,13 +100,19 @@ export async function GET(request: NextRequest) {
     return problem;
   }
 
-  const rows =
-    data?.map((row) => ({
-      day: row.day,
-      works: row.work_count ?? 0,
-      requests: row.license_requests ?? 0,
-      approvals: row.agreements ?? 0,
-    })) ?? [];
+  type KpiRow = {
+    day: string;
+    work_count: number | null;
+    license_requests: number | null;
+    agreements: number | null;
+  };
+
+  const rows = ((data ?? []) as KpiRow[]).map((row) => ({
+    day: row.day,
+    works: row.work_count ?? 0,
+    requests: row.license_requests ?? 0,
+    approvals: row.agreements ?? 0,
+  }));
 
   const csv = stringifyCsv(rows, {
     columns: ['day', 'works', 'requests', 'approvals'],
