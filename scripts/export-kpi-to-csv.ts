@@ -7,7 +7,6 @@ import { createClient } from '@chorerights/db';
 
 import { mkdirSync, writeFileSync } from 'fs';
 
-
 import { stringify } from './lib/csv-stringify-sync';
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;

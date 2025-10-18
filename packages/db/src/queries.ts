@@ -10,7 +10,6 @@ import type { Database } from './types';
 import type { PostgrestClient } from './vendor/postgrest-client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-
 export type PublicClient = SupabaseClient<Database>;
 
 export async function fetchDailyKpi(

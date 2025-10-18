@@ -2,7 +2,6 @@ import Link from 'next/link';
 
 import { generateICC } from '@chorerights/lib';
 
-
 const sampleICC = generateICC('JP', 'CRG', 27);
 
 export default function LandingPage() {

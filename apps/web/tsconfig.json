@@ -3,7 +3,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@chorerights/lib": ["../../packages/lib/src/index.ts"],
+      "@chorerights/lib/*": ["../../packages/lib/src/*"],
+      "@chorerights/lib/z": ["../../packages/lib/src/z.ts"],
+      "@chorerights/db": ["../../packages/db/src/index.ts"],
+      "@chorerights/db/*": ["../../packages/db/src/*"]
     },
     "jsx": "preserve",
     "module": "esnext",

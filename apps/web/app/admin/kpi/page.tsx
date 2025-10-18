@@ -2,7 +2,6 @@ import React from 'react';
 
 import { type Database } from '@chorerights/db';
 
-
 const sampleKpi: Database['public']['Tables']['kpi_daily']['Row'][] = [
   {
     day: '2025-10-01',
