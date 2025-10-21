@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { createProblemResponse } from './problem';
-import { applySupabaseCookies, createSupabaseServerClient } from './supabase';
+import { applySupabaseCookies, createSupabaseServerClient, ensureSupabaseSession } from './supabase';
 
 function isAdminEmail(email?: string | null): boolean {
   if (!email) {
@@ -22,6 +22,7 @@ function isAdminEmail(email?: string | null): boolean {
 
 export async function requireAdmin(request: NextRequest) {
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData?.user) {

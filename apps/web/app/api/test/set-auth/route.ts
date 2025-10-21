@@ -2,42 +2,12 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@supabase/supabase-js';
-import { createHmac, randomBytes } from 'crypto';
 import { z } from 'zod';
 
 const payloadSchema = z.object({
   email: z.string().email(),
   role: z.enum(['creator', 'licensee', 'admin']),
 });
-
-function base64UrlEncode(input: string | Buffer): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-}
-
-function signJwt(payload: Record<string, unknown>, secret: string): string {
-  const headerSegment = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payloadSegment = base64UrlEncode(JSON.stringify(payload));
-  const data = `${headerSegment}.${payloadSegment}`;
-  const signature = base64UrlEncode(
-    createHmacSha256(secret)
-      .update(data)
-      .digest(),
-  );
-
-  return `${data}.${signature}`;
-}
-
-function createHmacSha256(secret: string) {
-  return createHmac('sha256', secret);
-}
-
-function createRefreshToken(): string {
-  return base64UrlEncode(randomBytes(48));
-}
 
 export async function POST(request: NextRequest) {
   if (process.env.NODE_ENV === 'production') {
@@ -46,9 +16,8 @@ export async function POST(request: NextRequest) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseJwtSecret) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase environment variables missing for test auth helper.');
     return NextResponse.json(
       { error: 'Supabase environment not configured.' },
@@ -110,31 +79,23 @@ export async function POST(request: NextRequest) {
     userId = signInResult.data.user.id;
   }
 
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const expiration = issuedAt + 60 * 60;
+  const sessionResult = await supabase.auth.getSession();
+  let accessToken = sessionResult.data.session?.access_token;
+  let refreshToken = sessionResult.data.session?.refresh_token;
 
-  const accessTokenPayload = {
-    aud: 'authenticated',
-    exp: expiration,
-    sub: userId,
-    email,
-    role,
-    iss: supabaseUrl,
-    iat: issuedAt,
-    aal: 'aal1',
-    amr: ['password'],
-    app_metadata: {
-      provider: 'email',
-      providers: ['email'],
-      role,
-    },
-    user_metadata: {
-      role,
-    },
-  };
-
-  const accessToken = signJwt(accessTokenPayload, supabaseJwtSecret);
-  const refreshToken = createRefreshToken();
+  if (!accessToken || !refreshToken) {
+    const signInResult = await supabase.auth.signInWithPassword({ email, password });
+    if (signInResult.error || !signInResult.data.session) {
+      console.error('Failed to sign in test user', signInResult.error);
+      return NextResponse.json(
+        { error: 'Unable to authenticate test user.' },
+        { status: 500 },
+      );
+    }
+    accessToken = signInResult.data.session.access_token;
+    refreshToken = signInResult.data.session.refresh_token;
+    userId = signInResult.data.user.id;
+  }
 
   const sessionClient = createClient<any>(supabaseUrl, supabaseAnonKey, {
     global: {

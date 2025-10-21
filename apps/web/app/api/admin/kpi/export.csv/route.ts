@@ -6,7 +6,12 @@ import { z } from 'zod';
 import { requireAdmin } from '../../../_utils/admin';
 import { stringifyCsv } from '../../../_utils/csv';
 import { createProblemResponse } from '../../../_utils/problem';
-import { applySupabaseCookies, createSupabaseServerClient } from '../../../_utils/supabase';
+import {
+  applySupabaseCookies,
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+  ensureSupabaseSession,
+} from '../../../_utils/supabase';
 
 const querySchema = z
   .object({
@@ -57,6 +62,8 @@ export async function GET(request: NextRequest) {
   }
 
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
+  const serviceSupabase = createSupabaseServiceClient();
 
   const url = new URL(request.url);
   const rawParams = Object.fromEntries(url.searchParams.entries());
@@ -84,7 +91,7 @@ export async function GET(request: NextRequest) {
     return problem;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceSupabase
     .from('kpi_daily')
     .select('day,work_count,license_requests,agreements')
     .gte('day', rangeFrom)

@@ -98,7 +98,7 @@ test.describe('MVP happy path', () => {
 
     const adminContext = await browser.newContext({ baseURL });
     const adminPage = await adminContext.newPage();
-    const adminEmail = `admin-${randomUUID()}@test.local`;
+    const adminEmail = getAdminEmail();
     await createSession(adminPage, adminEmail, 'admin');
 
     await adminPage.goto('/admin/kpi');
@@ -168,5 +168,13 @@ test.describe('MVP happy path', () => {
     if (restLogs.length > LOG_LIMIT) {
       restLogs.shift();
     }
+  }
+
+  function getAdminEmail(): string {
+    const [firstEmail] = (process.env.ADMIN_EMAILS ?? 'tester@example.com')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    return firstEmail ?? 'tester@example.com';
   }
 });

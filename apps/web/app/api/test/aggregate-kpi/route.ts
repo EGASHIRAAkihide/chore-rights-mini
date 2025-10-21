@@ -3,7 +3,12 @@ import { NextResponse } from 'next/server';
 
 import { requireAdmin } from '../../_utils/admin';
 import { createProblemResponse } from '../../_utils/problem';
-import { applySupabaseCookies, createSupabaseServerClient } from '../../_utils/supabase';
+import {
+  applySupabaseCookies,
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+  ensureSupabaseSession,
+} from '../../_utils/supabase';
 
 export async function POST(request: NextRequest) {
   if (process.env.NODE_ENV === 'production') {
@@ -16,8 +21,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
+  const serviceSupabase = createSupabaseServiceClient();
 
-  const { error } = await supabase.rpc('aggregate_kpi_daily');
+  const { error } = await serviceSupabase.rpc('aggregate_kpi_daily');
   if (error) {
     console.error('Failed to run aggregate_kpi_daily RPC', error);
     const problem = createProblemResponse(500, 'Internal Server Error', {

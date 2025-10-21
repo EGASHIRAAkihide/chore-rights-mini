@@ -5,7 +5,11 @@ import { z } from 'zod';
 
 import { logAuditEvent } from '../../_utils/events';
 import { createProblemResponse } from '../../_utils/problem';
-import { applySupabaseCookies, createSupabaseServerClient } from '../../_utils/supabase';
+import {
+  applySupabaseCookies,
+  createSupabaseServerClient,
+  ensureSupabaseSession,
+} from '../../_utils/supabase';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -17,6 +21,7 @@ type ApproveInput = z.infer<typeof approveSchema>;
 
 export async function POST(request: NextRequest) {
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData?.user) {

@@ -4,7 +4,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createProblemResponse } from '../../_utils/problem';
-import { applySupabaseCookies, createSupabaseServerClient } from '../../_utils/supabase';
+import {
+  applySupabaseCookies,
+  createSupabaseServerClient,
+  ensureSupabaseSession,
+} from '../../_utils/supabase';
 
 const paramsSchema = z.object({
   id: z.string().uuid('id must be a valid UUID'),
@@ -12,6 +16,7 @@ const paramsSchema = z.object({
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
 
   const { success, data, error } = paramsSchema.safeParse(params);
   if (!success) {

@@ -7,7 +7,7 @@ import { formatICC, createWorkSchema } from '@chorerights/lib';
 
 import { logAuditEvent } from '../../_utils/events';
 import { createProblemResponse } from '../../_utils/problem';
-import { applySupabaseCookies, createSupabaseServerClient } from '../../_utils/supabase';
+import { applySupabaseCookies, createSupabaseServerClient, ensureSupabaseSession } from '../../_utils/supabase';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { z } from 'zod';
@@ -26,6 +26,7 @@ type WorkRegistrationInput = z.infer<typeof workRegistrationSchema>;
 
 export async function POST(request: NextRequest) {
   const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
+  await ensureSupabaseSession(request, supabase);
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData?.user) {
