@@ -27,9 +27,7 @@ export function createClient(options?: { serviceRole?: boolean }): DatabaseClien
 export function createPostgrestClient(options?: { url?: string; key?: string }) {
   const supabaseUrl = options?.url ?? process.env.SUPABASE_URL;
   const anonKey =
-    options?.key ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.SUPABASE_ANON_KEY;
+    options?.key ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !anonKey) {
     throw new Error('Missing Supabase credentials. Check environment variables.');

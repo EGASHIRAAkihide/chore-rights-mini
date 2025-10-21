@@ -13,7 +13,8 @@ export class PostgrestClient<Schema> {
       headers?: Record<string, string>;
     } = {},
   ) {
-    const apiKey = options.headers?.apikey ?? options.headers?.Authorization?.replace(/^Bearer\s+/i, '') ?? '';
+    const apiKey =
+      options.headers?.apikey ?? options.headers?.Authorization?.replace(/^Bearer\s+/i, '') ?? '';
     this.client = createClient<Schema>(url, apiKey, {
       auth: {
         persistSession: false,
