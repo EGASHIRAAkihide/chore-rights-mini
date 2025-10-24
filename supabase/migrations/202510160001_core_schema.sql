@@ -112,6 +112,21 @@ create table if not exists public.receipts (
 
 create index if not exists receipts_agreement_idx on public.receipts (agreement_id);
 
+create table if not exists public.payout_instructions (
+  id uuid primary key default gen_random_uuid(),
+  receipt_id uuid not null references public.receipts (id) on delete cascade,
+  agreement_id uuid not null references public.agreements (id) on delete cascade,
+  party_user_id uuid not null references public.users (id) on delete cascade,
+  currency text not null,
+  amount_cents bigint not null,
+  status public.receipt_status not null default 'pending',
+  rounding_adjustment boolean not null default false,
+  rounding_cents integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists payout_instructions_party_idx on public.payout_instructions (party_user_id, created_at desc);
+
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.users (id),
@@ -194,6 +209,7 @@ alter table public.license_requests enable row level security;
 alter table public.agreements enable row level security;
 alter table public.payments enable row level security;
 alter table public.receipts enable row level security;
+alter table public.payout_instructions enable row level security;
 alter table public.events enable row level security;
 alter table public.kpi_daily enable row level security;
 
@@ -375,6 +391,15 @@ $$;
 
 do $$
 begin
+  create policy payout_instructions_party_access on public.payout_instructions
+    for select using (party_user_id = auth.uid());
+exception
+  when duplicate_object then null;
+end
+$$;
+
+do $$
+begin
   create policy events_self_access on public.events
     for select using (user_id = auth.uid());
 exception
@@ -547,11 +572,20 @@ set search_path = public
 as $$
 declare
   v_receipt public.receipts%rowtype;
-  v_creator_share numeric := coalesce((p_split->>'creator')::numeric, 0.7);
-  v_platform_share numeric := coalesce((p_split->>'platform')::numeric, 0.3);
-  v_total numeric;
+  v_agreement public.agreements%rowtype;
+  v_split jsonb := coalesce(p_split, jsonb_build_object());
+  v_creator_share numeric := coalesce((v_split->>'creator')::numeric, 0.7);
+  v_licensee_share numeric := coalesce(
+    (v_split->>'licensee')::numeric,
+    coalesce((v_split->>'platform')::numeric, 0.3)
+  );
+  v_total_share numeric;
   v_creator_amount numeric;
-  v_platform_amount numeric;
+  v_licensee_amount numeric;
+  v_total_cents integer;
+  v_creator_cents integer;
+  v_licensee_cents integer;
+  v_rounding_cents integer;
   v_instructions jsonb;
 begin
   select * into v_receipt from public.receipts where id = p_receipt_id;
@@ -559,33 +593,52 @@ begin
     raise exception 'Receipt not found';
   end if;
 
+  select * into v_agreement from public.agreements where id = v_receipt.agreement_id;
+  if not found then
+    raise exception 'Agreement not found for receipt %', p_receipt_id;
+  end if;
+
   if v_receipt.status <> 'pending' then
     return coalesce(v_receipt.payout_instructions, '[]'::jsonb);
   end if;
 
-  v_total := nullif(v_creator_share + v_platform_share, 0);
-  if v_total is null then
+  v_total_share := nullif(v_creator_share + v_licensee_share, 0);
+  if v_total_share is null then
     v_creator_share := 0.7;
-    v_platform_share := 0.3;
-    v_total := 1;
+    v_licensee_share := 0.3;
+    v_total_share := 1;
   end if;
 
-  v_creator_share := v_creator_share / v_total;
-  v_platform_share := v_platform_share / v_total;
+  v_creator_share := v_creator_share / v_total_share;
+  v_licensee_share := v_licensee_share / v_total_share;
 
   v_creator_amount := round(v_receipt.gross_amount * v_creator_share, 2);
-  v_platform_amount := round(v_receipt.gross_amount - v_creator_amount, 2);
+  v_licensee_amount := round(v_receipt.gross_amount * v_licensee_share, 2);
+
+  v_total_cents := round(v_receipt.gross_amount * 100);
+  v_creator_cents := round(v_creator_amount * 100);
+  v_licensee_cents := greatest(0, v_total_cents - v_creator_cents);
+  v_rounding_cents := v_total_cents - (v_creator_cents + v_licensee_cents);
+  if v_rounding_cents <> 0 then
+    v_licensee_cents := v_licensee_cents + v_rounding_cents;
+  end if;
 
   v_instructions := jsonb_build_array(
     jsonb_build_object(
       'to', 'creator',
-      'amount', v_creator_amount,
-      'currency', v_receipt.currency
+      'party_user_id', v_agreement.creator_id,
+      'amount', (v_creator_cents::numeric / 100),
+      'amount_cents', v_creator_cents,
+      'currency', v_receipt.currency,
+      'rounding_cents', 0
     ),
     jsonb_build_object(
-      'to', 'platform',
-      'amount', v_platform_amount,
-      'currency', v_receipt.currency
+      'to', 'licensee',
+      'party_user_id', v_agreement.licensee_id,
+      'amount', (v_licensee_cents::numeric / 100),
+      'amount_cents', v_licensee_cents,
+      'currency', v_receipt.currency,
+      'rounding_cents', v_rounding_cents
     )
   );
 
@@ -594,6 +647,56 @@ begin
         payout_instructions = v_instructions,
         distributed_at = timezone('utc', now())
     where id = p_receipt_id;
+
+  delete from public.payout_instructions where receipt_id = p_receipt_id;
+
+  insert into public.payout_instructions (
+    receipt_id,
+    agreement_id,
+    party_user_id,
+    currency,
+    amount_cents,
+    status,
+    rounding_adjustment,
+    rounding_cents,
+    created_at
+  )
+  values (
+    p_receipt_id,
+    v_receipt.agreement_id,
+    v_agreement.creator_id,
+    v_receipt.currency,
+    v_creator_cents,
+    'distributed',
+    false,
+    0,
+    timezone('utc', now())
+  );
+
+  if v_agreement.licensee_id is not null then
+    insert into public.payout_instructions (
+      receipt_id,
+      agreement_id,
+      party_user_id,
+      currency,
+      amount_cents,
+      status,
+      rounding_adjustment,
+      rounding_cents,
+      created_at
+    )
+    values (
+      p_receipt_id,
+      v_receipt.agreement_id,
+      v_agreement.licensee_id,
+      v_receipt.currency,
+      v_licensee_cents,
+      'distributed',
+      v_rounding_cents <> 0,
+      v_rounding_cents,
+      timezone('utc', now())
+    );
+  end if;
 
   perform public.log_event('receipt.distributed', jsonb_build_object('receipt_id', p_receipt_id));
 

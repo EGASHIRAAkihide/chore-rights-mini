@@ -87,6 +87,19 @@ export const receiptRowSchema = z.object({
   distributed_at: z.string().datetime({ offset: true }).nullable(),
 });
 
+export const payoutInstructionRowSchema = z.object({
+  id: z.string().uuid(),
+  receipt_id: z.string().uuid(),
+  agreement_id: z.string().uuid(),
+  party_user_id: z.string().uuid(),
+  currency: z.string(),
+  amount_cents: z.coerce.number().int(),
+  status: receiptStatusSchema,
+  rounding_adjustment: z.boolean(),
+  rounding_cents: z.coerce.number().int(),
+  created_at: z.string().datetime({ offset: true }),
+});
+
 export const eventRowSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid().nullable(),
@@ -113,6 +126,7 @@ export type LicenseRequestRow = z.infer<typeof licenseRequestRowSchema>;
 export type AgreementRow = z.infer<typeof agreementRowSchema>;
 export type PaymentRow = z.infer<typeof paymentRowSchema>;
 export type ReceiptRow = z.infer<typeof receiptRowSchema>;
+export type PayoutInstructionRow = z.infer<typeof payoutInstructionRowSchema>;
 export type EventRow = z.infer<typeof eventRowSchema>;
 export type KpiDailyRow = z.infer<typeof kpiDailyRowSchema>;
 
