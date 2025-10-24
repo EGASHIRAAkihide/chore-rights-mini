@@ -43,6 +43,9 @@ function resolveMessage(input: ApiNotificationPayload | undefined): string {
   if (input.kind === 'work.register') {
     return 'Choreography registered successfully';
   }
+  if (input.kind === 'receipt.distributed') {
+    return 'Payout ready to review';
+  }
   return 'Notification received';
 }
 

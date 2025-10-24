@@ -297,6 +297,64 @@ export interface Database {
           },
         ];
       };
+      payout_instructions: {
+        Row: {
+          id: string;
+          receipt_id: string;
+          agreement_id: string;
+          party_user_id: string;
+          currency: string;
+          amount_cents: number;
+          status: 'pending' | 'distributed' | 'failed';
+          rounding_adjustment: boolean;
+          rounding_cents: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          receipt_id: string;
+          agreement_id: string;
+          party_user_id: string;
+          currency: string;
+          amount_cents: number;
+          status?: 'pending' | 'distributed' | 'failed';
+          rounding_adjustment?: boolean;
+          rounding_cents?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          receipt_id?: string;
+          agreement_id?: string;
+          party_user_id?: string;
+          currency?: string;
+          amount_cents?: number;
+          status?: 'pending' | 'distributed' | 'failed';
+          rounding_adjustment?: boolean;
+          rounding_cents?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'payout_instructions_receipt_id_fkey';
+            columns: ['receipt_id'];
+            referencedRelation: 'receipts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'payout_instructions_agreement_id_fkey';
+            columns: ['agreement_id'];
+            referencedRelation: 'agreements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'payout_instructions_party_user_id_fkey';
+            columns: ['party_user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       events: {
         Row: {
           id: string;
