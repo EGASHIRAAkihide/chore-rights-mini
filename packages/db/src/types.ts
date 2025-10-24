@@ -254,6 +254,49 @@ export interface Database {
           },
         ];
       };
+      receipts: {
+        Row: {
+          id: string;
+          agreement_id: string;
+          status: 'pending' | 'distributed' | 'failed';
+          gross_amount: number;
+          currency: string;
+          meta: Json | null;
+          payout_instructions: Json;
+          created_at: string;
+          distributed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          agreement_id: string;
+          status?: 'pending' | 'distributed' | 'failed';
+          gross_amount: number;
+          currency?: string;
+          meta?: Json | null;
+          payout_instructions?: Json;
+          created_at?: string;
+          distributed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          agreement_id?: string;
+          status?: 'pending' | 'distributed' | 'failed';
+          gross_amount?: number;
+          currency?: string;
+          meta?: Json | null;
+          payout_instructions?: Json;
+          created_at?: string;
+          distributed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'receipts_agreement_id_fkey';
+            columns: ['agreement_id'];
+            referencedRelation: 'agreements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       events: {
         Row: {
           id: string;
@@ -337,6 +380,13 @@ export interface Database {
         };
         Returns: string;
       };
+      distribute_receipt: {
+        Args: {
+          p_receipt_id: string;
+          p_split?: Json;
+        };
+        Returns: Json;
+      };
       log_event: {
         Args: {
           p_kind: string;
@@ -345,7 +395,9 @@ export interface Database {
         Returns: void;
       };
     };
-    Enums: {};
+    Enums: {
+      receipt_status: 'pending' | 'distributed' | 'failed';
+    };
     CompositeTypes: {};
   };
 }

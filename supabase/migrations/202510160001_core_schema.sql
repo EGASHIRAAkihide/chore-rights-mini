@@ -90,6 +90,28 @@ create table if not exists public.payments (
 
 create index if not exists payments_agreement_idx on public.payments (agreement_id);
 
+do $$
+begin
+  create type public.receipt_status as enum ('pending','distributed','failed');
+exception
+  when duplicate_object then null;
+end
+$$;
+
+create table if not exists public.receipts (
+  id uuid primary key default gen_random_uuid(),
+  agreement_id uuid not null references public.agreements (id) on delete cascade,
+  status public.receipt_status not null default 'pending',
+  gross_amount numeric(12,2) not null,
+  currency text not null default 'JPY',
+  meta jsonb,
+  payout_instructions jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  distributed_at timestamptz
+);
+
+create index if not exists receipts_agreement_idx on public.receipts (agreement_id);
+
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.users (id),
@@ -171,6 +193,7 @@ alter table public.fingerprints enable row level security;
 alter table public.license_requests enable row level security;
 alter table public.agreements enable row level security;
 alter table public.payments enable row level security;
+alter table public.receipts enable row level security;
 alter table public.events enable row level security;
 alter table public.kpi_daily enable row level security;
 
@@ -286,6 +309,62 @@ begin
         select 1
         from public.agreements a
         where a.id = payments.agreement_id
+          and a.creator_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end
+$$;
+
+do $$
+begin
+  create policy receipts_participant_access on public.receipts
+    for select using (
+      exists (
+        select 1
+        from public.agreements a
+        where a.id = receipts.agreement_id
+          and (a.creator_id = auth.uid() or a.licensee_id = auth.uid())
+      )
+    );
+exception
+  when duplicate_object then null;
+end
+$$;
+
+do $$
+begin
+  create policy receipts_creator_insert on public.receipts
+    for insert with check (
+      exists (
+        select 1
+        from public.agreements a
+        where a.id = receipts.agreement_id
+          and a.creator_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end
+$$;
+
+do $$
+begin
+  create policy receipts_creator_update on public.receipts
+    for update using (
+      exists (
+        select 1
+        from public.agreements a
+        where a.id = receipts.agreement_id
+          and a.creator_id = auth.uid()
+      )
+    )
+    with check (
+      exists (
+        select 1
+        from public.agreements a
+        where a.id = receipts.agreement_id
           and a.creator_id = auth.uid()
       )
     );
@@ -454,6 +533,71 @@ as $$
 begin
   insert into public.events (user_id, kind, meta)
   values (auth.uid(), p_kind, p_meta);
+end;
+$$;
+
+create or replace function public.distribute_receipt(
+  p_receipt_id uuid,
+  p_split jsonb default jsonb_build_object()
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_receipt public.receipts%rowtype;
+  v_creator_share numeric := coalesce((p_split->>'creator')::numeric, 0.7);
+  v_platform_share numeric := coalesce((p_split->>'platform')::numeric, 0.3);
+  v_total numeric;
+  v_creator_amount numeric;
+  v_platform_amount numeric;
+  v_instructions jsonb;
+begin
+  select * into v_receipt from public.receipts where id = p_receipt_id;
+  if not found then
+    raise exception 'Receipt not found';
+  end if;
+
+  if v_receipt.status <> 'pending' then
+    return coalesce(v_receipt.payout_instructions, '[]'::jsonb);
+  end if;
+
+  v_total := nullif(v_creator_share + v_platform_share, 0);
+  if v_total is null then
+    v_creator_share := 0.7;
+    v_platform_share := 0.3;
+    v_total := 1;
+  end if;
+
+  v_creator_share := v_creator_share / v_total;
+  v_platform_share := v_platform_share / v_total;
+
+  v_creator_amount := round(v_receipt.gross_amount * v_creator_share, 2);
+  v_platform_amount := round(v_receipt.gross_amount - v_creator_amount, 2);
+
+  v_instructions := jsonb_build_array(
+    jsonb_build_object(
+      'to', 'creator',
+      'amount', v_creator_amount,
+      'currency', v_receipt.currency
+    ),
+    jsonb_build_object(
+      'to', 'platform',
+      'amount', v_platform_amount,
+      'currency', v_receipt.currency
+    )
+  );
+
+  update public.receipts
+    set status = 'distributed',
+        payout_instructions = v_instructions,
+        distributed_at = timezone('utc', now())
+    where id = p_receipt_id;
+
+  perform public.log_event('receipt.distributed', jsonb_build_object('receipt_id', p_receipt_id));
+
+  return v_instructions;
 end;
 $$;
 

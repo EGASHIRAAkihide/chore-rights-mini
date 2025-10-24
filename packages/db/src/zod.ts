@@ -73,6 +73,20 @@ export const paymentRowSchema = z.object({
   created_at: z.string().datetime({ offset: true }),
 });
 
+export const receiptStatusSchema = z.enum(['pending', 'distributed', 'failed']);
+
+export const receiptRowSchema = z.object({
+  id: z.string().uuid(),
+  agreement_id: z.string().uuid(),
+  status: receiptStatusSchema,
+  gross_amount: z.coerce.number(),
+  currency: z.string(),
+  meta: z.unknown().nullable(),
+  payout_instructions: z.unknown(),
+  created_at: z.string().datetime({ offset: true }),
+  distributed_at: z.string().datetime({ offset: true }).nullable(),
+});
+
 export const eventRowSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid().nullable(),
@@ -98,6 +112,7 @@ export type FingerprintRow = z.infer<typeof fingerprintRowSchema>;
 export type LicenseRequestRow = z.infer<typeof licenseRequestRowSchema>;
 export type AgreementRow = z.infer<typeof agreementRowSchema>;
 export type PaymentRow = z.infer<typeof paymentRowSchema>;
+export type ReceiptRow = z.infer<typeof receiptRowSchema>;
 export type EventRow = z.infer<typeof eventRowSchema>;
 export type KpiDailyRow = z.infer<typeof kpiDailyRowSchema>;
 

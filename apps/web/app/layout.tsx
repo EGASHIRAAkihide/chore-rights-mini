@@ -1,5 +1,7 @@
 import { Inter } from 'next/font/google';
 
+import { NotificationBell } from '@/components/notifications/bell';
+
 import type { Metadata } from 'next';
 
 import './globals.css';
@@ -32,21 +34,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <p className="text-xs text-slate-500">MVP PoC Console</p>
               </div>
             </div>
-            <nav className="flex items-center gap-6 text-sm text-slate-600" aria-label="Primary">
-              <a className="hover:text-brand" href="/" data-testid="nav-home-link">
-                Home
-              </a>
-              <a
-                className="hover:text-brand"
-                href="/dashboard/new"
-                data-testid="nav-dashboard-link"
-              >
-                Creator Dashboard
-              </a>
-              <a className="hover:text-brand" href="/admin/kpi" data-testid="nav-admin-link">
-                Admin KPI
-              </a>
-            </nav>
+            <div className="flex items-center gap-4">
+              <nav className="flex items-center gap-6 text-sm text-slate-600" aria-label="Primary">
+                <a className="hover:text-brand" href="/" data-testid="nav-home-link">
+                  Home
+                </a>
+                <a
+                  className="hover:text-brand"
+                  href="/dashboard/new"
+                  data-testid="nav-dashboard-link"
+                >
+                  Creator Dashboard
+                </a>
+                <a className="hover:text-brand" href="/admin/kpi" data-testid="nav-admin-link">
+                  Admin KPI
+                </a>
+              </nav>
+              <NotificationBell />
+            </div>
           </div>
         </header>
         <main className="mx-auto min-h-screen max-w-5xl px-6 py-10">{children}</main>
