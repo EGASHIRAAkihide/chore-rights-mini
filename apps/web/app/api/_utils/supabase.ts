@@ -74,3 +74,6 @@ export function createSupabaseServiceClient() {
     },
   });
 }
+
+export const createServerSupabaseClient = createSupabaseServerClient;
+export const createAdminSupabaseClient = createSupabaseServiceClient;

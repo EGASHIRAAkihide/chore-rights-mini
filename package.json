@@ -4,6 +4,7 @@
   "packageManager": "pnpm@8.15.4",
   "scripts": {
     "dev": "pnpm --filter @chorerights/web dev",
+    "build:web": "pnpm --filter @chorerights/web build",
     "build": "pnpm --filter @chorerights/web build",
     "lint": "pnpm run lint:root && pnpm -r --stream lint",
     "lint:root": "eslint apps packages scripts --ext .ts,.tsx,.js,.cjs,.mjs --max-warnings=0",

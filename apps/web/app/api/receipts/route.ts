@@ -10,6 +10,7 @@ import { createProblemResponse } from '../_utils/problem';
 import {
   applySupabaseCookies,
   createSupabaseServerClient,
+  createSupabaseServiceClient,
   ensureSupabaseSession,
 } from '../_utils/supabase';
 
@@ -26,15 +27,35 @@ const receiptSchema = z.object({
   split: z
     .object({
       creator: z.coerce.number().nonnegative().optional(),
+      licensee: z.coerce.number().nonnegative().optional(),
       platform: z.coerce.number().nonnegative().optional(),
     })
     .optional(),
   memo: z.string().max(200).optional(),
+  creatorId: z.string().uuid().optional(),
 });
 
 export async function POST(request: NextRequest) {
-  const { supabase, response: supabaseResponse } = createSupabaseServerClient(request);
-  await ensureSupabaseSession(request, supabase);
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const authHeader = request.headers.get('authorization') ?? '';
+  const normalizedAuthHeader = authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : authHeader;
+  const isServiceRequest = Boolean(
+    serviceRoleKey && normalizedAuthHeader.length > 0 && normalizedAuthHeader === serviceRoleKey,
+  );
+
+  let supabase: ReturnType<typeof createSupabaseServerClient>['supabase'];
+  let supabaseResponse: NextResponse | null = null;
+
+  if (isServiceRequest) {
+    supabase = createSupabaseServiceClient();
+  } else {
+    const supabaseSetup = createSupabaseServerClient(request);
+    supabase = supabaseSetup.supabase;
+    supabaseResponse = supabaseSetup.response;
+    await ensureSupabaseSession(request, supabase);
+  }
 
   let payload: z.infer<typeof receiptSchema>;
   try {
@@ -46,7 +67,9 @@ export async function POST(request: NextRequest) {
         ? `${issue.path.join('.') || 'body'}: ${issue.message}`
         : 'Invalid request payload.';
       const problem = createProblemResponse(400, 'Bad Request', { detail });
-      applySupabaseCookies(problem, supabaseResponse);
+      if (supabaseResponse) {
+        applySupabaseCookies(problem, supabaseResponse);
+      }
       return problem;
     }
     payload = parsed.data;
@@ -54,22 +77,38 @@ export async function POST(request: NextRequest) {
     const problem = createProblemResponse(400, 'Bad Request', {
       detail: 'Request body must be valid JSON.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData?.user) {
-    const problem = createProblemResponse(401, 'Unauthorized', {
-      detail: 'Authentication required.',
-    });
-    applySupabaseCookies(problem, supabaseResponse);
-    return problem;
+  let actorUserId: string | null = null;
+  if (isServiceRequest) {
+    actorUserId = payload.creatorId ?? null;
+    if (!actorUserId) {
+      const problem = createProblemResponse(400, 'Bad Request', {
+        detail: 'creatorId is required when using service credentials.',
+      });
+      return problem;
+    }
+  } else {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData?.user) {
+      const problem = createProblemResponse(401, 'Unauthorized', {
+        detail: 'Authentication required.',
+      });
+      if (supabaseResponse) {
+        applySupabaseCookies(problem, supabaseResponse);
+      }
+      return problem;
+    }
+    actorUserId = authData.user.id;
   }
 
   const { data: agreement, error: agreementError } = await supabase
     .from('agreements')
-    .select('id,creator_id')
+    .select('id,creator_id,licensee_id')
     .eq('id', payload.agreementId)
     .maybeSingle();
 
@@ -78,7 +117,9 @@ export async function POST(request: NextRequest) {
     const problem = createProblemResponse(500, 'Internal Server Error', {
       detail: 'Unable to verify agreement for receipt.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
@@ -86,15 +127,19 @@ export async function POST(request: NextRequest) {
     const problem = createProblemResponse(404, 'Not Found', {
       detail: 'Agreement not found.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
-  if (agreement.creator_id !== authData.user.id) {
+  if (!actorUserId || agreement.creator_id !== actorUserId) {
     const problem = createProblemResponse(403, 'Forbidden', {
       detail: 'Only the creator may register receipts for this agreement.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
@@ -116,7 +161,9 @@ export async function POST(request: NextRequest) {
     const problem = createProblemResponse(500, 'Internal Server Error', {
       detail: 'Unable to create receipt.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
@@ -127,6 +174,7 @@ export async function POST(request: NextRequest) {
   if (payload.split) {
     rpcArgs.p_split = {
       creator: payload.split.creator ?? null,
+      licensee: payload.split.licensee ?? payload.split.platform ?? null,
       platform: payload.split.platform ?? null,
     };
   }
@@ -147,17 +195,23 @@ export async function POST(request: NextRequest) {
     const problem = createProblemResponse(500, 'Internal Server Error', {
       detail: 'Receipt created but payout distribution failed.',
     });
-    applySupabaseCookies(problem, supabaseResponse);
+    if (supabaseResponse) {
+      applySupabaseCookies(problem, supabaseResponse);
+    }
     return problem;
   }
 
   const responsePayload = normalizeReceiptResponse(refreshed, rpcResult);
 
   const response = NextResponse.json(responsePayload, { status: 201 });
-  applySupabaseCookies(response, supabaseResponse);
+  if (supabaseResponse) {
+    applySupabaseCookies(response, supabaseResponse);
+  }
+
+  const auditUserId = actorUserId ?? agreement.creator_id;
 
   await logAuditEvent(supabase, {
-    userId: authData.user.id,
+    userId: auditUserId,
     action: 'receipt.create',
     entity: 'receipt',
     entityId: responsePayload.id,
@@ -168,7 +222,7 @@ export async function POST(request: NextRequest) {
 
   if (responsePayload.status === 'distributed') {
     await logAuditEvent(supabase, {
-      userId: authData.user.id,
+      userId: auditUserId,
       action: 'receipt.distribute',
       entity: 'receipt',
       entityId: responsePayload.id,
