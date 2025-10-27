@@ -141,6 +141,9 @@ async function createSession(page: Page, email: string, role: UserRole): Promise
   const response = await apiCall(page, 'POST', '/api/test/set-auth', {
     data: { email, role },
   });
+  if (!response.response.ok()) {
+    console.error('[set-auth] failed', response.response.status(), response.raw);
+  }
   expect(response.response.ok()).toBeTruthy();
   const userId = response.json?.userId as string | undefined;
   expect(userId).toBeTruthy();
