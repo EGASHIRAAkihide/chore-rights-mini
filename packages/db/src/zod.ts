@@ -73,7 +73,14 @@ export const paymentRowSchema = z.object({
   created_at: z.string().datetime({ offset: true }),
 });
 
-export const receiptStatusSchema = z.enum(['pending', 'distributed', 'failed']);
+export const receiptStatusSchema = z.enum([
+  'pending',
+  'scheduled',
+  'processing',
+  'distributed',
+  'paid',
+  'failed',
+]);
 
 export const receiptRowSchema = z.object({
   id: z.string().uuid(),
@@ -98,6 +105,8 @@ export const payoutInstructionRowSchema = z.object({
   rounding_adjustment: z.boolean(),
   rounding_cents: z.coerce.number().int(),
   created_at: z.string().datetime({ offset: true }),
+  paid_at: z.string().datetime({ offset: true }).nullable(),
+  txn_ref: z.string().max(120).nullable(),
 });
 
 export const eventRowSchema = z.object({

@@ -5,11 +5,14 @@ import type { APIRequestOptions, Page } from '@playwright/test';
 
 type UserRole = 'creator' | 'licensee' | 'admin';
 
-test.describe('Payouts dashboard', () => {
-  test('shows distributed payouts for creator', async ({ browser }, testInfo) => {
+const CSV_HEADER =
+  'receipt_id,party_user_id,currency,amount_cents,status,created_at,paid_at';
+
+test.describe('Admin payout CSV export', () => {
+  test('exports payout instructions for a given month', async ({ browser }, testInfo) => {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!isValidServiceRoleKey(serviceRoleKey)) {
-      test.skip(true, 'SUPABASE_SERVICE_ROLE_KEY is required to seed payout receipts');
+      test.skip(true, 'SUPABASE_SERVICE_ROLE_KEY is required to export payouts.');
     }
 
     const baseURL =
@@ -25,13 +28,16 @@ test.describe('Payouts dashboard', () => {
     const licenseePage = await licenseeContext.newPage();
 
     try {
-      const creatorEmail = `creator-${randomUUID()}@payout.test`;
+      const creatorEmail = `creator-${randomUUID()}@payout-export.test`;
       const creatorId = await createSession(creatorPage, creatorEmail, 'creator');
+
+      const licenseeEmail = `licensee-${randomUUID()}@payout-export.test`;
+      await createSession(licenseePage, licenseeEmail, 'licensee');
 
       const workSerial = `${Math.floor(100000 + Math.random() * 900000)}`;
       const workPayload = {
-        title: `Payout Flow ${workSerial}`,
-        description: 'Automated payout verification',
+        title: `Payout Export ${workSerial}`,
+        description: 'CSV export verification',
         video: { storageKey: `public/works/${randomUUID()}.mp4` },
         icc: { country: 'JP', registrant: 'CRG', serial: workSerial },
         fingerprint: { algo: 'pose-v1', hash_or_vector: randomUUID().replace(/-/g, '') },
@@ -46,15 +52,12 @@ test.describe('Payouts dashboard', () => {
       const workId = workResponse.json?.id as string;
       expect(workId).toBeTruthy();
 
-      const licenseeEmail = `licensee-${randomUUID()}@payout.test`;
-      await createSession(licenseePage, licenseeEmail, 'licensee');
-
       const licenseRequestPayload = {
         workId,
-        usage: 'Broadcast feature highlight',
+        usage: 'Broadcast special',
         territory: 'JP',
-        durationDays: 14,
-        feeYen: 88000,
+        durationDays: 7,
+        feeYen: 55000,
       };
 
       const licenseRequestResponse = await apiCall(
@@ -76,66 +79,84 @@ test.describe('Payouts dashboard', () => {
       const agreementId = approveResponse.json?.agreementId as string;
       expect(agreementId).toBeTruthy();
 
-      const grossAmount = 120000;
-      const grossCents = Math.round(grossAmount * 100);
-      const creatorShare = 0.7;
-      const platformShare = 0.3;
-      const creatorExpectedCents = Math.round(grossCents * creatorShare);
-      const platformFeeCents = Math.round(grossCents * platformShare);
-      const expectedNet = grossCents - platformFeeCents;
+      await createReceipt(creatorPage, serviceRoleKey, {
+        agreementId,
+        creatorId,
+        grossAmount: 82000,
+        currency: 'JPY',
+      });
 
-      const receiptResponse = await creatorPage.request.post('/api/receipts', {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          'content-type': 'application/json',
-        },
-        data: {
-          agreementId,
-          grossAmount,
-          currency: 'JPY',
-          creatorId,
-          split: {
-            creator: creatorShare,
-            licensee: platformShare,
+      await createReceipt(creatorPage, serviceRoleKey, {
+        agreementId,
+        creatorId,
+        grossAmount: 63000,
+        currency: 'JPY',
+      });
+
+      await creatorPage.waitForTimeout(1000);
+
+      const now = new Date();
+      const monthParam = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+      const exportResponse = await creatorPage.request.get(
+        `/api/admin/payouts/export.csv?month=${monthParam}`,
+        {
+          headers: {
+            'x-service-role-key': serviceRoleKey,
           },
-          memo: 'E2E payout distribution',
         },
-      });
+      );
 
-      expect(receiptResponse.status()).toBe(201);
+      expect(exportResponse.status()).toBe(200);
+      const contentType = exportResponse.headers()['content-type'] ?? '';
+      expect(contentType.toLowerCase()).toContain('text/csv');
 
-      await creatorPage.goto('/dashboard/payouts');
-      await expect(creatorPage.getByTestId('payouts-table')).toBeVisible();
+      const csvText = await exportResponse.text();
+      const lines = csvText.split('\n').filter((line) => line.length > 0);
 
-      const rows = await creatorPage.getByTestId('payout-row').all();
-      expect(rows.length).toBeGreaterThan(0);
+      expect(lines.length).toBeGreaterThan(1);
+      expect(lines[0]).toBe(CSV_HEADER);
 
-      const amountCents = await creatorPage.evaluate(() => {
-        return Array.from(
-          document.querySelectorAll<HTMLTableCellElement>('tr[data-testid="payout-row"] td[data-amount-cents]'),
-        ).map((cell) => Number(cell.getAttribute('data-amount-cents')));
-      });
+      const dataRows = lines.slice(1);
+      const firstRowCells = dataRows[0].split(',');
+      expect(firstRowCells.length).toBe(7);
+      expect(Number.isNaN(Number(firstRowCells[3]))).toBe(false);
 
-      const summedCents = amountCents.reduce((sum, value) => sum + value, 0);
-      expect(summedCents).toBeGreaterThan(0);
-      expect(Math.abs(summedCents - expectedNet)).toBeLessThanOrEqual(1);
-      expect(Math.abs(summedCents - creatorExpectedCents)).toBeLessThanOrEqual(1);
-
-      const totalEntries = await creatorPage.evaluate(() => {
-        return Array.from(document.querySelectorAll('[data-testid="payouts-total-row"]')).map((node) => ({
-          currency: node.getAttribute('data-currency'),
-          total: Number(node.getAttribute('data-total-cents')),
-        }));
-      });
-
-      const jpyEntry = totalEntries.find((entry) => entry.currency === 'JPY');
-      expect(jpyEntry).toBeDefined();
-      expect(jpyEntry?.total ?? 0).toBeGreaterThanOrEqual(summedCents);
+      for (const row of dataRows) {
+        const [receiptId, partyUserId, , amountCents, , createdAt] = row.split(',');
+        expect(receiptId).toBeTruthy();
+        expect(partyUserId).toBeTruthy();
+        expect(Number.isNaN(Number(amountCents))).toBe(false);
+        const createdDate = new Date(createdAt);
+        expect(Number.isNaN(createdDate.getTime())).toBe(false);
+        expect(createdDate.getUTCFullYear()).toBe(now.getUTCFullYear());
+        expect(createdDate.getUTCMonth()).toBe(now.getUTCMonth());
+      }
     } finally {
       await Promise.all([creatorContext.close(), licenseeContext.close()]);
     }
   });
 });
+
+async function createReceipt(
+  page: Page,
+  serviceRoleKey: string,
+  options: { agreementId: string; creatorId: string; grossAmount: number; currency: string },
+) {
+  const response = await page.request.post('/api/receipts', {
+    headers: {
+      Authorization: `Bearer ${serviceRoleKey}`,
+      'content-type': 'application/json',
+    },
+    data: {
+      agreementId: options.agreementId,
+      grossAmount: options.grossAmount,
+      currency: options.currency,
+      creatorId: options.creatorId,
+    },
+  });
+  expect(response.status()).toBe(201);
+}
 
 async function createSession(page: Page, email: string, role: UserRole): Promise<string> {
   const response = await apiCall(page, 'POST', '/api/test/set-auth', {

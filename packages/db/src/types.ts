@@ -258,7 +258,7 @@ export interface Database {
         Row: {
           id: string;
           agreement_id: string;
-          status: 'pending' | 'distributed' | 'failed';
+          status: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           gross_amount: number;
           currency: string;
           meta: Json | null;
@@ -269,7 +269,7 @@ export interface Database {
         Insert: {
           id?: string;
           agreement_id: string;
-          status?: 'pending' | 'distributed' | 'failed';
+          status?: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           gross_amount: number;
           currency?: string;
           meta?: Json | null;
@@ -280,7 +280,7 @@ export interface Database {
         Update: {
           id?: string;
           agreement_id?: string;
-          status?: 'pending' | 'distributed' | 'failed';
+          status?: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           gross_amount?: number;
           currency?: string;
           meta?: Json | null;
@@ -305,10 +305,12 @@ export interface Database {
           party_user_id: string;
           currency: string;
           amount_cents: number;
-          status: 'pending' | 'distributed' | 'failed';
+          status: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           rounding_adjustment: boolean;
           rounding_cents: number;
           created_at: string;
+          paid_at: string | null;
+          txn_ref: string | null;
         };
         Insert: {
           id?: string;
@@ -317,10 +319,12 @@ export interface Database {
           party_user_id: string;
           currency: string;
           amount_cents: number;
-          status?: 'pending' | 'distributed' | 'failed';
+          status?: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           rounding_adjustment?: boolean;
           rounding_cents?: number;
           created_at?: string;
+          paid_at?: string | null;
+          txn_ref?: string | null;
         };
         Update: {
           id?: string;
@@ -329,10 +333,12 @@ export interface Database {
           party_user_id?: string;
           currency?: string;
           amount_cents?: number;
-          status?: 'pending' | 'distributed' | 'failed';
+          status?: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
           rounding_adjustment?: boolean;
           rounding_cents?: number;
           created_at?: string;
+          paid_at?: string | null;
+          txn_ref?: string | null;
         };
         Relationships: [
           {
@@ -454,7 +460,7 @@ export interface Database {
       };
     };
     Enums: {
-      receipt_status: 'pending' | 'distributed' | 'failed';
+      receipt_status: 'pending' | 'scheduled' | 'processing' | 'distributed' | 'paid' | 'failed';
     };
     CompositeTypes: {};
   };

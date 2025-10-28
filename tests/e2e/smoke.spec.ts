@@ -25,6 +25,11 @@ test.describe('MVP happy path', () => {
   });
 
   test('register -> request -> approve -> export CSV', async ({ browser }, testInfo) => {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!isValidServiceRoleKey(serviceRoleKey)) {
+      test.skip(true, 'SUPABASE_SERVICE_ROLE_KEY is required for E2E flows.');
+    }
+
     const baseURL =
       testInfo.project.use.baseURL ??
       process.env.E2E_BASE_URL ??
@@ -179,5 +184,9 @@ test.describe('MVP happy path', () => {
       .map((value) => value.trim())
       .filter(Boolean);
     return firstEmail ?? 'tester@example.com';
+  }
+
+  function isValidServiceRoleKey(value: string | undefined): value is string {
+    return typeof value === 'string' && value.split('.').length === 3;
   }
 });
