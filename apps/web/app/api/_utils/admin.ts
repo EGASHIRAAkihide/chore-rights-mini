@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createProblemResponse } from './problem';
 import { applySupabaseCookies, createSupabaseServerClient, ensureSupabaseSession } from './supabase';
 
-function isAdminEmail(email?: string | null): boolean {
+export function isAdminEmail(email?: string | null): boolean {
   if (!email) {
     return false;
   }

@@ -5,6 +5,9 @@ import type { Database } from '@chorerights/db';
 
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 
+import { MarkPaidButton } from '../../../components/payouts/mark-paid-button';
+import { isAdminEmail } from '../../api/_utils/admin';
+
 type PayoutInstruction = Database['public']['Tables']['payout_instructions']['Row'];
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +43,28 @@ function formatStatus(value: string | null) {
   return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function StatusBadge({ status }: { status: string | null }) {
+  const normalized = (status ?? 'pending').toLowerCase();
+  const label = formatStatus(status);
+
+  let className =
+    'inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200';
+
+  if (normalized === 'paid') {
+    className =
+      'inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200';
+  } else if (normalized === 'pending' || normalized === 'scheduled' || normalized === 'processing') {
+    className =
+      'inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200';
+  }
+
+  return (
+    <span className={className} data-testid="payout-status-badge" data-status={normalized}>
+      {label}
+    </span>
+  );
+}
+
 function formatRounding(cents: number, currency: string) {
   const symbol = currencySymbols[currency] ?? '';
   const sign = cents >= 0 ? '+' : '';
@@ -65,10 +90,12 @@ export default async function PayoutsPage() {
     redirect('/');
   }
 
+  const canMarkPaid = isAdminEmail(user.email);
+
   const { data, error } = await supabase
     .from('payout_instructions')
     .select(
-      'id,receipt_id,agreement_id,party_user_id,created_at,currency,amount_cents,status,rounding_adjustment,rounding_cents',
+      'id,receipt_id,agreement_id,party_user_id,created_at,currency,amount_cents,status,rounding_adjustment,rounding_cents,paid_at,txn_ref',
     )
     .eq('party_user_id', user.id)
     .order('created_at', { ascending: false });
@@ -144,7 +171,14 @@ export default async function PayoutsPage() {
                     >
                       {formatAmount(row.amount_cents, row.currency)}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{formatStatus(row.status)}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      <div className="flex flex-col gap-2">
+                        <StatusBadge status={row.status} />
+                        {canMarkPaid && (row.status ?? '').toLowerCase() !== 'paid' ? (
+                          <MarkPaidButton instructionId={row.id} />
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-emerald-600">
                       {row.rounding_adjustment ? formatRounding(row.rounding_cents, row.currency) : ''}
                     </td>

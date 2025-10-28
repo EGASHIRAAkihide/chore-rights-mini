@@ -8,7 +8,7 @@ type UserRole = 'creator' | 'licensee' | 'admin';
 test.describe('Payouts dashboard', () => {
   test('shows distributed payouts for creator', async ({ browser }, testInfo) => {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
+    if (!isValidServiceRoleKey(serviceRoleKey)) {
       test.skip(true, 'SUPABASE_SERVICE_ROLE_KEY is required to seed payout receipts');
     }
 
@@ -171,4 +171,8 @@ async function apiCall(
   }
 
   return { response, raw, json };
+}
+
+function isValidServiceRoleKey(value: string | undefined): value is string {
+  return typeof value === 'string' && value.split('.').length === 3;
 }
