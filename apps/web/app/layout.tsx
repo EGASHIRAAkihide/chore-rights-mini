@@ -1,12 +1,8 @@
-import { Inter } from 'next/font/google';
-
 import { NotificationBell } from '@/components/notifications/bell';
 
 import type { Metadata } from 'next';
 
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'ChoreRights MVP',
@@ -22,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="bg-slate-50">
-      <body className={`${inter.className} text-slate-900 antialiased`}>
+      <body className="font-sans text-slate-900 antialiased">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-2">

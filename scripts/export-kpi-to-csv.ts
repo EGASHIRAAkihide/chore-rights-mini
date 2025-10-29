@@ -3,6 +3,7 @@
  * Export KPI to CSV: reads `kpi_daily` from Supabase and writes /docs/kpi/kpi_export_<date>.csv
  */
 
+import './load-env';
 import { createClient } from '@chorerights/db';
 
 import { mkdirSync, writeFileSync } from 'fs';

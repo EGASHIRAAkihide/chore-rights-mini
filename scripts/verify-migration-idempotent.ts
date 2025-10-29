@@ -4,6 +4,8 @@
  * - CREATE ... IF NOT EXISTS or
  * - wrapped in DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN ... END $$;
  */
+import './load-env';
+
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
